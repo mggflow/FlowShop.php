@@ -1,5 +1,5 @@
 {
-    "name": "mggflow/flowshop-core",
+    "name": "mggflow/flowshop",
     "type": "library",
     "license": "MIT",
     "autoload": {
