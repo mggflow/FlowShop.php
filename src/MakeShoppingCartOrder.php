@@ -25,7 +25,7 @@ class MakeShoppingCartOrder
      */
     public function __construct(
         OrderData $orderData, PurchaseData $purchaseData,
-        object $order, array $purchases
+        object    $order, array $purchases
     )
     {
         $this->orderData = $orderData;
@@ -41,7 +41,8 @@ class MakeShoppingCartOrder
      * @throws FailedToCreateOrder
      * @throws FailedToCreatePurchases
      */
-    public function make(): int{
+    public function make(): int
+    {
         $this->createOrder();
         $this->checkOrderCreation();
         $this->createPurchases();
@@ -54,25 +55,30 @@ class MakeShoppingCartOrder
      * Получить Id созданного заказа.
      * @return int|null
      */
-    public function getOrderId(): ?int {
+    public function getOrderId(): ?int
+    {
         return $this->orderId;
     }
 
-    protected function createOrder(){
+    protected function createOrder()
+    {
         $this->orderId = $this->orderData->createOrder($this->order);
     }
 
-    protected function checkOrderCreation() {
-        if (is_null($this->orderId)){
+    protected function checkOrderCreation()
+    {
+        if (is_null($this->orderId)) {
             throw new FailedToCreateOrder();
         }
     }
 
-    protected function createPurchases(){
-        $this->purchasesCreated = $this->purchaseData->createAnyPurchases();
+    protected function createPurchases()
+    {
+        $this->purchasesCreated = $this->purchaseData->createAnyPurchases($this->purchases);
     }
 
-    protected function checkPurchasesCreation() {
+    protected function checkPurchasesCreation()
+    {
         if (is_null($this->purchasesCreated)) {
             $this->orderData->deleteOrderById($this->orderId);
             throw new FailedToCreatePurchases();

@@ -7,9 +7,12 @@ use MGGFLOW\FlowShop\Interfaces\ProductData;
 
 class FindFilteredProducts
 {
+    protected ProductData $productData;
+
     protected array $categories;
     protected array $sortBy;
-    protected ProductData $productData;
+    protected int $offset;
+    protected int $count;
 
     protected ?array $foundProducts;
 
@@ -17,13 +20,21 @@ class FindFilteredProducts
      * @param ProductData $productData
      * @param array $categories
      * @param array $sortBy
+     * @param int $offset
+     * @param int $count
      */
-    public function __construct(ProductData $productData, array $categories, array $sortBy)
+    public function __construct(
+        ProductData $productData,
+        array       $categories, array $sortBy,
+        int         $offset, int $count
+    )
     {
         $this->productData = $productData;
 
         $this->categories = $categories;
         $this->sortBy = $sortBy;
+        $this->offset = $offset;
+        $this->count = $count;
     }
 
     /**
@@ -31,7 +42,8 @@ class FindFilteredProducts
      * @return array
      * @throws FailedToFindProducts
      */
-    public function find(): array {
+    public function find(): array
+    {
         $this->findProducts();
         $this->checkFoundProducts();
 
@@ -47,12 +59,17 @@ class FindFilteredProducts
         return $this->foundProducts;
     }
 
-    protected function findProducts() {
-        $this->foundProducts = $this->productData->findProducts($this->categories, $this->sortBy);
+    protected function findProducts(): void
+    {
+        $this->foundProducts = $this->productData->findProducts(
+            $this->categories, $this->sortBy,
+            $this->offset, $this->count
+        );
     }
 
-    protected function checkFoundProducts() {
-        if (is_null($this->foundProducts)){
+    protected function checkFoundProducts(): void
+    {
+        if (is_null($this->foundProducts)) {
             throw new FailedToFindProducts();
         }
     }
