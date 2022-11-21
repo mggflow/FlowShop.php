@@ -7,27 +7,20 @@ use MGGFLOW\FlowShop\Interfaces\ProductData;
 
 class FindMainPageProducts
 {
-    /**
-     * Категории продуктов для поиска.
-     * @var array
-     */
-    public array $categories = [];
-    /**
-     * Параметры сортировки продуктов.
-     * @var array|string[]
-     */
-    public array $sortBy = ['created_at' => 'desc'];
-
     protected ProductData $productData;
 
     protected ?array $foundProducts;
+    protected int $offset;
+    protected int $count;
 
     /**
      * @param ProductData $productData
      */
-    public function __construct(ProductData $productData)
+    public function __construct(ProductData $productData, int $offset, int $count)
     {
         $this->productData = $productData;
+        $this->offset = $offset;
+        $this->count = $count;
     }
 
     /**
@@ -52,7 +45,7 @@ class FindMainPageProducts
     }
 
     protected function findProducts(){
-        $this->foundProducts = $this->productData->findProducts($this->categories, $this->sortBy);
+        $this->foundProducts = $this->productData->findMainPageProducts($this->offset, $this->count);
     }
 
     protected function handleFoundProducts() {
