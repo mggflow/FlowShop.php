@@ -4,8 +4,50 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "592576bc74cf8ecae7a03883f0cf80b6",
-    "packages": [],
+    "content-hash": "35afe9097ae5146cb6070764a80d41c3",
+    "packages": [
+        {
+            "name": "mggflow/int-coder",
+            "version": "v1.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/mggflow/int-coder.php.git",
+                "reference": "83f36cede86105aeaa47edaf487e4f38b13dccb4"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/mggflow/int-coder.php/zipball/83f36cede86105aeaa47edaf487e4f38b13dccb4",
+                "reference": "83f36cede86105aeaa47edaf487e4f38b13dccb4",
+                "shasum": ""
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^9.5"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "MGGFLOW\\IntCoder\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Pavel Eliseev",
+                    "email": "deusagnis@gmail.com",
+                    "homepage": "https://mggflow.in",
+                    "role": "Developer"
+                }
+            ],
+            "support": {
+                "issues": "https://github.com/mggflow/int-coder.php/issues",
+                "source": "https://github.com/mggflow/int-coder.php/tree/v1.1.0"
+            },
+            "time": "2022-11-25T15:58:12+00:00"
+        }
+    ],
     "packages-dev": [
         {
             "name": "doctrine/instantiator",

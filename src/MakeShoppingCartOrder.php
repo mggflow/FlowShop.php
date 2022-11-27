@@ -2,10 +2,12 @@
 
 namespace MGGFLOW\FlowShop;
 
+use MGGFLOW\FlowShop\Entities\Order;
 use MGGFLOW\FlowShop\Exceptions\FailedToCreateOrder;
 use MGGFLOW\FlowShop\Exceptions\FailedToCreatePurchases;
 use MGGFLOW\FlowShop\Interfaces\OrderData;
 use MGGFLOW\FlowShop\Interfaces\PurchaseData;
+use MGGFLOW\IntCoder\Int2Code;
 
 class MakeShoppingCartOrder
 {
@@ -15,6 +17,8 @@ class MakeShoppingCartOrder
     protected array $purchases;
 
     protected ?int $orderId;
+    protected Int2Code $coder;
+    protected string $code;
     protected ?int $purchasesCreated;
 
     /**
@@ -43,8 +47,10 @@ class MakeShoppingCartOrder
      */
     public function make(): int
     {
+        $this->prepareOrder();
         $this->createOrder();
         $this->checkOrderCreation();
+        $this->setOrderCode();
         $this->createPurchases();
         $this->checkPurchasesCreation();
 
@@ -60,6 +66,10 @@ class MakeShoppingCartOrder
         return $this->orderId;
     }
 
+    protected function prepareOrder(){
+        $this->order->code = '';
+    }
+
     protected function createOrder()
     {
         $this->orderId = $this->orderData->createOrder($this->order);
@@ -70,6 +80,24 @@ class MakeShoppingCartOrder
         if (is_null($this->orderId)) {
             throw new FailedToCreateOrder();
         }
+    }
+
+    protected function setOrderCode(){
+        $this->makeIdCoder();
+        $this->genOrderCode();
+        $this->updateOrderCode();
+    }
+
+    protected function makeIdCoder(){
+        $this->coder = new Int2Code(Order::CODE_MIN, Order::CODE_MAX, Order::CODE_ALPHABET, Order::CODE_LENGTH);
+    }
+
+    protected function genOrderCode(){
+        $this->code = $this->coder->encode($this->orderId);
+    }
+
+    protected function updateOrderCode() {
+        $this->orderData->updateById($this->orderId, ['code' => $this->code]);
     }
 
     protected function createPurchases()

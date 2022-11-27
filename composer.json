@@ -17,5 +17,8 @@
     ],
     "require-dev": {
         "phpunit/phpunit": "^9.5"
+    },
+    "require": {
+        "mggflow/int-coder": "^1.1"
     }
 }
