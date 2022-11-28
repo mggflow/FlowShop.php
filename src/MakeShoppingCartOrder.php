@@ -5,33 +5,42 @@ namespace MGGFLOW\FlowShop;
 use MGGFLOW\FlowShop\Entities\Order;
 use MGGFLOW\FlowShop\Exceptions\FailedToCreateOrder;
 use MGGFLOW\FlowShop\Exceptions\FailedToCreatePurchases;
+use MGGFLOW\FlowShop\Exceptions\FailedToFindProducts;
+use MGGFLOW\FlowShop\Exceptions\IncorrectPurchasesProducts;
+use MGGFLOW\FlowShop\Exceptions\InvalidPurchases;
 use MGGFLOW\FlowShop\Interfaces\OrderData;
+use MGGFLOW\FlowShop\Interfaces\ProductData;
 use MGGFLOW\FlowShop\Interfaces\PurchaseData;
 use MGGFLOW\IntCoder\Int2Code;
 
 class MakeShoppingCartOrder
 {
+    protected ProductData $productData;
     protected OrderData $orderData;
     protected PurchaseData $purchaseData;
     protected object $order;
     protected array $purchases;
 
+    protected array $productsIds;
+    protected ?array $products;
+
     protected ?int $orderId;
     protected Int2Code $coder;
-    protected string $code;
     protected ?int $purchasesCreated;
 
     /**
+     * @param ProductData $productData
      * @param OrderData $orderData
      * @param PurchaseData $purchaseData
      * @param object $order
      * @param array $purchases
      */
     public function __construct(
-        OrderData $orderData, PurchaseData $purchaseData,
-        object    $order, array $purchases
+        ProductData $productData, OrderData $orderData, PurchaseData $purchaseData,
+        object      $order, array $purchases
     )
     {
+        $this->productData = $productData;
         $this->orderData = $orderData;
         $this->purchaseData = $purchaseData;
 
@@ -47,10 +56,13 @@ class MakeShoppingCartOrder
      */
     public function make(): int
     {
-        $this->prepareOrder();
+        $this->loadPurchasesProducts();
+        $this->validatePurchases();
+        $this->preSetOrderFields();
         $this->createOrder();
         $this->checkOrderCreation();
-        $this->setOrderCode();
+        $this->fixatePurchases();
+        $this->supplementOrderFields();
         $this->createPurchases();
         $this->checkPurchasesCreation();
 
@@ -66,8 +78,53 @@ class MakeShoppingCartOrder
         return $this->orderId;
     }
 
-    protected function prepareOrder(){
+    protected function loadPurchasesProducts()
+    {
+        $this->productsIds = array_column($this->purchases, 'product_id');
+        $this->products = $this->productData->findByIds($this->productsIds);
+        if (empty($this->products)) {
+            throw new FailedToFindProducts();
+        }
+        $this->products = array_column($this->products, null, 'id');
+    }
+
+    protected function validatePurchases()
+    {
+        if (count($this->purchases) != count($this->products)) {
+            throw new IncorrectPurchasesProducts();
+        }
+
+        foreach ($this->purchases as $purchase) {
+            $purchaseProduct = $this->products[$purchase->product_id];
+
+            if ($purchaseProduct->archival) {
+                throw new IncorrectPurchasesProducts();
+            }
+
+            if ($purchaseProduct->amount === null and $purchase->amount != null) {
+                throw new InvalidPurchases();
+            }
+
+            if ($purchaseProduct->durations != null and in_array($purchase->duration, explode(',', $purchaseProduct->durations))) {
+                throw new InvalidPurchases();
+            }
+        }
+    }
+
+    protected function preSetOrderFields()
+    {
+        $this->resetOrderCode();
+        $this->resetOrderPrice();
+    }
+
+    protected function resetOrderCode()
+    {
         $this->order->code = '';
+    }
+
+    protected function resetOrderPrice()
+    {
+        $this->order->price = 0;
     }
 
     protected function createOrder()
@@ -82,22 +139,50 @@ class MakeShoppingCartOrder
         }
     }
 
-    protected function setOrderCode(){
-        $this->makeIdCoder();
-        $this->genOrderCode();
-        $this->updateOrderCode();
+    protected function fixatePurchases()
+    {
+        $purchases = new FixatePurchases($this->productData, $this->purchases, $this->products);
+        $this->purchases = $purchases->fixate();
     }
 
-    protected function makeIdCoder(){
+    protected function supplementOrderFields()
+    {
+        $this->postSetOrderFields();
+        $this->updateOrderFields();
+    }
+
+    protected function postSetOrderFields()
+    {
+        $this->makeIdCoder();
+        $this->genOrderCode();
+        $this->calcOrderPrice();
+    }
+
+    protected function makeIdCoder()
+    {
         $this->coder = new Int2Code(Order::CODE_MIN, Order::CODE_MAX, Order::CODE_ALPHABET, Order::CODE_LENGTH);
     }
 
-    protected function genOrderCode(){
-        $this->code = $this->coder->encode($this->orderId);
+    protected function genOrderCode()
+    {
+        $this->order->code = $this->coder->encode($this->orderId);
     }
 
-    protected function updateOrderCode() {
-        $this->orderData->updateById($this->orderId, ['code' => $this->code]);
+    protected function calcOrderPrice()
+    {
+        $calculator = new CalcOrderPrice($this->purchases, $this->products);
+        $calculationResult = $calculator->calc();
+
+        $this->purchases = $calculationResult['purchases'];
+        $this->order->price = $calculationResult['orderPrice'];
+    }
+
+    protected function updateOrderFields()
+    {
+        $this->orderData->updateById($this->orderId, [
+            'code' => $this->order->code,
+            'price' => $this->order->price
+        ]);
     }
 
     protected function createPurchases()
@@ -109,7 +194,15 @@ class MakeShoppingCartOrder
     {
         if (is_null($this->purchasesCreated)) {
             $this->orderData->deleteOrderById($this->orderId);
+            $this->freePurchasesAmounts();
+
             throw new FailedToCreatePurchases();
         }
+    }
+
+    protected function freePurchasesAmounts()
+    {
+        $purchases = new FreePurchasesAmounts($this->purchases, $this->productData);
+        $purchases->free();
     }
 }
