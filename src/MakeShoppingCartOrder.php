@@ -3,11 +3,12 @@
 namespace MGGFLOW\FlowShop;
 
 use MGGFLOW\FlowShop\Entities\Order;
+use MGGFLOW\FlowShop\Entities\Purchase;
 use MGGFLOW\FlowShop\Exceptions\FailedToCreateOrder;
 use MGGFLOW\FlowShop\Exceptions\FailedToCreatePurchases;
 use MGGFLOW\FlowShop\Exceptions\FailedToFindProducts;
 use MGGFLOW\FlowShop\Exceptions\IncorrectPurchasesProducts;
-use MGGFLOW\FlowShop\Exceptions\InvalidPurchases;
+use MGGFLOW\FlowShop\Exceptions\InvalidPurchase;
 use MGGFLOW\FlowShop\Interfaces\OrderData;
 use MGGFLOW\FlowShop\Interfaces\ProductData;
 use MGGFLOW\FlowShop\Interfaces\PurchaseData;
@@ -80,12 +81,8 @@ class MakeShoppingCartOrder
 
     protected function loadPurchasesProducts()
     {
-        $this->productsIds = array_column($this->purchases, 'product_id');
-        $this->products = $this->productData->findByIds($this->productsIds);
-        if (empty($this->products)) {
-            throw new FailedToFindProducts();
-        }
-        $this->products = array_column($this->products, null, 'id');
+        $loader = new LoadPurchasesProducts($this->productData, $this->purchases);
+        $this->products = $loader->load();
     }
 
     protected function validatePurchases()
@@ -101,13 +98,7 @@ class MakeShoppingCartOrder
                 throw new IncorrectPurchasesProducts();
             }
 
-            if ($purchaseProduct->amount === null and $purchase->amount != null) {
-                throw new InvalidPurchases();
-            }
-
-            if ($purchaseProduct->durations != null and in_array($purchase->duration, explode(',', $purchaseProduct->durations))) {
-                throw new InvalidPurchases();
-            }
+            Purchase::validate($purchase, $purchaseProduct);
         }
     }
 
@@ -141,8 +132,9 @@ class MakeShoppingCartOrder
 
     protected function fixatePurchases()
     {
-        $purchases = new FixatePurchases($this->productData, $this->purchases, $this->products);
-        $this->purchases = $purchases->fixate();
+        $purchases = new OperatePurchasesAmounts($this->purchases, $this->productData, $this->products);
+        $result = $purchases->subAmounts();
+        $this->purchases = $result['purchases'];
     }
 
     protected function supplementOrderFields()
@@ -202,7 +194,7 @@ class MakeShoppingCartOrder
 
     protected function freePurchasesAmounts()
     {
-        $purchases = new FreePurchasesAmounts($this->purchases, $this->productData);
-        $purchases->free();
+        $purchases = new OperatePurchasesAmounts($this->purchases, $this->productData, null);
+        $purchases->addAmounts();
     }
 }
