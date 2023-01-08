@@ -11,6 +11,7 @@ use MGGFLOW\FlowShop\Exceptions\InvalidPurchase;
 use MGGFLOW\FlowShop\Interfaces\OrderData;
 use MGGFLOW\FlowShop\Interfaces\ProductData;
 use MGGFLOW\FlowShop\Interfaces\PurchaseData;
+use MGGFLOW\FlowShop\Policies\Ownership;
 
 class EditOrderPurchase
 {
@@ -18,6 +19,7 @@ class EditOrderPurchase
     protected ProductData $productData;
     protected OrderData $orderData;
     protected object $editedPurchase;
+    protected object $user;
 
     protected int $orderId;
     protected ?array $purchases;
@@ -33,7 +35,7 @@ class EditOrderPurchase
 
     public function __construct(
         PurchaseData $purchaseData, ProductData $productData, OrderData $orderData,
-        object $editedPurchase
+        object $editedPurchase, object $user
     )
     {
         $this->purchaseData = $purchaseData;
@@ -41,6 +43,7 @@ class EditOrderPurchase
         $this->orderData = $orderData;
 
         $this->editedPurchase = $editedPurchase;
+        $this->user = $user;
     }
 
     public function edit(): array
@@ -53,6 +56,7 @@ class EditOrderPurchase
         $this->setEditedPurchaseProduct();
         $this->setPrevPurchase();
         $this->validateEditedPurchase();
+        $this->checkOwnership();
         $this->updateLocalPurchase();
         $this->provideAmounts();
         $this->calcOrderPrices();
@@ -113,6 +117,10 @@ class EditOrderPurchase
             throw new InvalidPurchase();
         }
         Purchase::validate($this->editedPurchase, $this->editedPurchaseProduct);
+    }
+
+    protected function checkOwnership(){
+        Ownership::belongsTo($this->prevPurchase,$this->user);
     }
 
     protected function updateLocalPurchase(){
